@@ -2,31 +2,41 @@ import "./Header.css";
 import { Button, Segmented, Select, Space } from "antd";
 import { MoonOutlined, SunOutlined } from "@ant-design/icons";
 import { useTheme } from "../../contexts/ThemeConfigProvider";
+import {
+  ValueContext,
+  ValuePairType,
+} from "../../contexts/ValueConfigPairAndTimeframe";
+import { useContext } from "react";
 
 const Header = () => {
   const { isDarkMode, toggleDarkMode } = useTheme();
+  const { setSelectedPair, setSelectedTime } = useContext(
+    ValueContext
+  ) as ValuePairType;
 
   const handleChangePair = (value: string) => {
     console.log(`Selected pair: ${value}`);
+    setSelectedPair(value);
   };
 
   const handleChangeTimeframe = (value: string) => {
     console.log(`Selected timeframe: ${value}`);
+    setSelectedTime(value);
   };
 
   return (
-    <div className="header">
-      <div className="header-left">
+    <div className='header'>
+      <div className='header-left'>
         <Space wrap>
           <Select
-            defaultValue="BTC/USDT"
+            defaultValue='BTC/USDT'
             style={{ width: 120 }}
             onChange={handleChangePair}
             options={[
-              { value: "BTC/USDT", label: "BTC/USDT" },
-              { value: "ETH/USDT", label: "ETH/USDT" },
-              { value: "SOL/USDT", label: "SOL/USDT" },
-              { value: "TON/USDT", label: "TON/USDT" },
+              { value: "BTCUSDT", label: "BTC/USDT" },
+              { value: "ETHUSDT", label: "ETH/USDT" },
+              { value: "SOLUSDT", label: "SOL/USDT" },
+              { value: "TONUSDT", label: "TON/USDT" },
             ]}
           />
 
@@ -37,10 +47,10 @@ const Header = () => {
         </Space>
       </div>
       <Button
-        type="text"
+        type='text'
         onClick={toggleDarkMode}
         icon={isDarkMode ? <SunOutlined /> : <MoonOutlined />}
-        size="large"
+        size='large'
       />
     </div>
   );
