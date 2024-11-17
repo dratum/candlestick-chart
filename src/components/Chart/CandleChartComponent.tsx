@@ -53,7 +53,7 @@ export const CandleChart: FC<CandleChartProps> = ({
     const candleSeries = chart.addCandlestickSeries();
     candleSeriesRef.current = candleSeries;
 
-    if (data) {
+    if (data && data.length > 0) {
       const formattedData: CandlestickData[] = data.map((el) => ({
         time: timeToLocal(el[0] / 1000) as UTCTimestamp,
         open: parseFloat(el[1]),
@@ -78,6 +78,7 @@ export const CandleChart: FC<CandleChartProps> = ({
 
   useEffect(() => {
     if (!candleSeriesRef.current || chartData.length === 0) return;
+
     const intervalDuration = getIntervalDuration(interval);
 
     const disconnect = webSocketConnect(selectedPair, (price) => {

@@ -20,7 +20,9 @@ const Chart = () => {
   useEffect(() => {
     const getData = async () => {
       const data = await fetchDataBinance(selectedPair, selectedTime);
-      setHistoricalMarketData(data as MarketData[]);
+      if (data) {
+        setHistoricalMarketData(data);
+      }
     };
     getData();
   }, [selectedPair, selectedTime]);
