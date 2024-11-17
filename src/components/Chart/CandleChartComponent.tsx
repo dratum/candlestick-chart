@@ -8,12 +8,19 @@ import { FC, useEffect, useRef, useState } from "react";
 import { MarketData } from "./Chart";
 import { webSocketConnect } from "./api/webSocketBinance";
 import { useTheme } from "../../contexts/ThemeConfigProvider";
+import timeToLocal from "./helpers/timeToLocal";
+import getIntervalDuration from "./helpers/getIntervalDuration";
 
 interface CandleChartProps {
   data: MarketData[];
   selectedPair: string;
+  interval: string;
 }
-export const CandleChart: FC<CandleChartProps> = ({ data, selectedPair }) => {
+export const CandleChart: FC<CandleChartProps> = ({
+  data,
+  selectedPair,
+  interval,
+}) => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const candleSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
   const [chartData, setChartData] = useState<CandlestickData[]>([]);
@@ -36,7 +43,10 @@ export const CandleChart: FC<CandleChartProps> = ({ data, selectedPair }) => {
       timeScale: {
         visible: true,
         timeVisible: true,
-        secondsVisible: true,
+        rightOffset: 50,
+        barSpacing: 10,
+        fixLeftEdge: true,
+        borderColor: isDarkMode ? "#ffffff" : "#000000",
       },
     });
 
@@ -45,7 +55,7 @@ export const CandleChart: FC<CandleChartProps> = ({ data, selectedPair }) => {
 
     if (data) {
       const formattedData: CandlestickData[] = data.map((el) => ({
-        time: (el[0] / 1000) as UTCTimestamp,
+        time: timeToLocal(el[0] / 1000) as UTCTimestamp,
         open: parseFloat(el[1]),
         high: parseFloat(el[2]),
         low: parseFloat(el[3]),
@@ -68,29 +78,47 @@ export const CandleChart: FC<CandleChartProps> = ({ data, selectedPair }) => {
 
   useEffect(() => {
     if (!candleSeriesRef.current || chartData.length === 0) return;
+    const intervalDuration = getIntervalDuration(interval);
 
     const disconnect = webSocketConnect(selectedPair, (price) => {
-      const lastCandle = chartData[chartData.length - 1];
-
-      if (!lastCandle) return;
-
-      const newCandle: CandlestickData = {
-        time: ((lastCandle.time as UTCTimestamp) + 60) as UTCTimestamp,
-        open: lastCandle.close,
-        high: Math.max(lastCandle.close, parseFloat(price)),
-        low: Math.min(lastCandle.close, parseFloat(price)),
-        close: parseFloat(price),
-      };
-
       setChartData((prevData) => {
-        const updatedData = [...prevData, newCandle];
-        candleSeriesRef.current!.setData(updatedData);
-        return updatedData;
+        const lastCandle = prevData[prevData.length - 1];
+        const currentTime = timeToLocal(Math.floor(Date.now() / 1000));
+
+        if (!lastCandle) return prevData;
+
+        if (
+          currentTime <
+          (lastCandle.time as UTCTimestamp) + intervalDuration
+        ) {
+          const updatedCandle: CandlestickData = {
+            ...lastCandle,
+            high: Math.max(lastCandle.high, parseFloat(price)),
+            low: Math.min(lastCandle.low, parseFloat(price)),
+            close: parseFloat(price),
+          };
+          const updatedData = [...prevData.slice(0, -1), updatedCandle];
+          candleSeriesRef.current!.setData(updatedData);
+          return updatedData;
+        } else {
+          console.log("Creating new candle");
+          const newCandle: CandlestickData = {
+            time: ((lastCandle.time as UTCTimestamp) +
+              intervalDuration) as UTCTimestamp,
+            open: parseFloat(price),
+            high: parseFloat(price),
+            low: parseFloat(price),
+            close: parseFloat(price),
+          };
+          const updatedData = [...prevData, newCandle];
+          candleSeriesRef.current!.setData(updatedData);
+          return updatedData;
+        }
       });
     });
 
     return () => disconnect();
-  }, [selectedPair, chartData]);
+  }, [selectedPair, chartData, interval]);
 
   return (
     <div ref={chartContainerRef} style={{ width: "80%", height: "50%" }} />

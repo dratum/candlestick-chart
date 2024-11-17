@@ -30,6 +30,7 @@ const Chart = () => {
       <CandleChart
         data={historicalMarketData}
         selectedPair={selectedPair}
+        interval={selectedTime}
       ></CandleChart>
       <p>
         TradingView Lightweight Charts™ <br />
