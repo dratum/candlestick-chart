@@ -4,27 +4,27 @@ import {
   ISeriesApi,
   UTCTimestamp,
 } from "lightweight-charts";
-import { FC, useEffect, useRef, useState } from "react";
 import { MarketData } from "./Chart";
-import { webSocketConnect } from "./api/webSocketBinance";
-import { useTheme } from "../../contexts/ThemeConfigProvider";
 import timeToLocal from "./helpers/timeToLocal";
+import { FC, useEffect, useRef, useState } from "react";
+import { webSocketConnect } from "./api/webSocketBinance";
 import getIntervalDuration from "./helpers/getIntervalDuration";
 
 interface CandleChartProps {
   data: MarketData[];
   selectedPair: string;
   interval: string;
+  isDarkMode: boolean;
 }
 export const CandleChart: FC<CandleChartProps> = ({
   data,
   selectedPair,
   interval,
+  isDarkMode,
 }) => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
+  const [setChartData] = useState<CandlestickData[]>([]);
   const candleSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
-  const [chartData, setChartData] = useState<CandlestickData[]>([]);
-  const { isDarkMode } = useTheme();
 
   useEffect(() => {
     if (!chartContainerRef.current) return;
@@ -43,7 +43,7 @@ export const CandleChart: FC<CandleChartProps> = ({
       timeScale: {
         visible: true,
         timeVisible: true,
-        rightOffset: 50,
+        rightOffset: 30,
         barSpacing: 10,
         fixLeftEdge: true,
         borderColor: isDarkMode ? "#ffffff" : "#000000",
@@ -76,12 +76,15 @@ export const CandleChart: FC<CandleChartProps> = ({
     };
   }, [data, isDarkMode]);
 
+  /////////////////////////////////////////////////////////////////////////
   useEffect(() => {
-    if (!candleSeriesRef.current || chartData.length === 0) return;
+    if (!candleSeriesRef.current) return;
 
     const intervalDuration = getIntervalDuration(interval);
 
     const disconnect = webSocketConnect(selectedPair, (price) => {
+      console.log("open");
+
       setChartData((prevData) => {
         const lastCandle = prevData[prevData.length - 1];
         const currentTime = timeToLocal(Math.floor(Date.now() / 1000));
@@ -98,8 +101,10 @@ export const CandleChart: FC<CandleChartProps> = ({
             low: Math.min(lastCandle.low, parseFloat(price)),
             close: parseFloat(price),
           };
+
           const updatedData = [...prevData.slice(0, -1), updatedCandle];
           candleSeriesRef.current!.setData(updatedData);
+
           return updatedData;
         } else {
           console.log("Creating new candle");
@@ -118,8 +123,11 @@ export const CandleChart: FC<CandleChartProps> = ({
       });
     });
 
-    return () => disconnect();
-  }, [selectedPair, chartData, interval]);
+    return () => {
+      console.log("close");
+      disconnect();
+    };
+  }, [selectedPair, interval]);
 
   return (
     <div ref={chartContainerRef} style={{ width: "80%", height: "50%" }} />

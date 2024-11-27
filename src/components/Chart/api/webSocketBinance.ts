@@ -11,15 +11,10 @@ export function webSocketConnect(
     setPriceData(data.c.slice(0, data.c.indexOf(".") + 3));
   };
 
-  ws.onerror = (error) => {
-    console.error(`WebSocket error for ${selectedPair}:`, error);
-  };
-
   const pongInterval = setInterval(() => {
-    if (ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({ pong: true }));
-    }
+    ws.send(JSON.stringify({ pong: true }));
   }, 180000);
+  clearInterval(pongInterval);
 
   return () => {
     clearInterval(pongInterval);
