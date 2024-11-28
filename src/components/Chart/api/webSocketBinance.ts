@@ -5,19 +5,33 @@ export function webSocketConnect(
   const ws = new WebSocket(
     `wss://stream.binance.com:9443/ws/${selectedPair.toLowerCase()}@ticker`
   );
-
-  ws.onmessage = (event: MessageEvent) => {
-    const data: { c: string } = JSON.parse(event.data);
-    setPriceData(data.c.slice(0, data.c.indexOf(".") + 3));
+  ws.onopen = () => {
+    console.log("WebSocket connected");
   };
 
-  const pongInterval = setInterval(() => {
-    ws.send(JSON.stringify({ pong: true }));
-  }, 180000);
-  clearInterval(pongInterval);
+  ws.onmessage = (event: MessageEvent) => {
+    const message = JSON.parse(event.data);
 
+    if (message.ping) {
+      console.log("Ping received:", message.ping);
+      ws.send(JSON.stringify({ pong: message.ping }));
+      console.log("Pong sent in response to ping");
+    } else if (message.c) {
+      const price = message.c.slice(0, message.c.indexOf(".") + 3);
+      setPriceData(price);
+    }
+  };
+
+  const emptyPongInterval = setInterval(() => {
+    ws.send(JSON.stringify({ pong: true }));
+    webSocketConnect(selectedPair, setPriceData);
+  }, 180000);
+  ws.onclose = () => {
+    clearInterval(emptyPongInterval);
+  };
   return () => {
-    clearInterval(pongInterval);
+    clearInterval(emptyPongInterval);
     ws.close();
+    console.log("WebSocket connection closed manually");
   };
 }
